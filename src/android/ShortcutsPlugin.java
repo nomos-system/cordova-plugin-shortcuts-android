@@ -16,7 +16,13 @@ import android.util.Base64;
 import android.util.Log;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.AdaptiveIconDrawable;
 import android.graphics.drawable.Icon;
+import android.graphics.drawable.ColorDrawable;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -30,6 +36,7 @@ import android.content.res.Resources;
 import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.core.graphics.drawable.IconCompat;
+import androidx.core.content.res.ResourcesCompat;
 
 public class ShortcutsPlugin extends CordovaPlugin {
 
@@ -45,7 +52,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
 
     @Override
     public boolean execute(
-        String action, 
+        String action,
         JSONArray args,
         CallbackContext callbackContext) {
             try {
@@ -58,7 +65,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
                     boolean supported = this.supportsPinned();
                     callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, supported));
                     return true;
-                } 
+                }
                 else if (action.equals(ACTION_SET_DYNAMIC)) {
                     setDynamicShortcuts(args);
                     callbackContext.success();
@@ -98,7 +105,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
                 this.onNewIntentCallbackContext.sendPluginResult(result);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Exception handling onNewIntent: " + e.getMessage());            
+            Log.e(TAG, "Exception handling onNewIntent: " + e.getMessage());
         }
     }
 
@@ -108,7 +115,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
     }
 
     private void subscribeOnNewIntent(
-        JSONArray args, 
+        JSONArray args,
         CallbackContext callbackContext
     ) throws JSONException {
         boolean remove = args.optBoolean(0);
@@ -135,12 +142,12 @@ public class ShortcutsPlugin extends CordovaPlugin {
 
         jsonIntent.put("action", intent.getAction());
         jsonIntent.put("flags", intent.getFlags());
-        
+
         Set<String> categories = intent.getCategories();
         if (categories != null) {
             jsonIntent.put("categories", new JSONArray(categories));
         }
-        
+
         Uri data = intent.getData();
         if (data != null) {
             jsonIntent.put("data", data.toString());
@@ -156,7 +163,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
                 Object value = extras.get(key);
                 if (value instanceof Boolean) {
                     jsonExtras.put(key, (Boolean)value);
-                } 
+                }
                 else if (value instanceof Integer) {
                     jsonExtras.put(key, (Integer)value);
                 }
@@ -183,7 +190,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
     ) throws JSONException {
 
         Intent intent = new Intent();
-        
+
         String activityClass = jsonIntent.optString(
             "activityClass",
             this.cordova.getActivity().getClass().getName());
@@ -226,21 +233,24 @@ public class ShortcutsPlugin extends CordovaPlugin {
                 String key = keys.next();
                 Object value = extras.get(key);
                 if (value != null) {
+                    if (key.indexOf('.') < 0) {
+                        key = activityPackage + "." + key;
+                    }
                     if (value instanceof Boolean) {
                         intent.putExtra(key, (Boolean)value);
-                    } 
+                    }
                     else if (value instanceof Integer) {
                         intent.putExtra(key, (Integer)value);
                     }
                     else if (value instanceof Long) {
                         intent.putExtra(key, (Long)value);
-                    } 
+                    }
                     else if (value instanceof Float) {
                         intent.putExtra(key, (Float)value);
-                    } 
+                    }
                     else if (value instanceof Double) {
                         intent.putExtra(key, (Double)value);
-                    } 
+                    }
                     else {
                         intent.putExtra(key, value.toString());
                     }
@@ -263,7 +273,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
             }
 
             ShortcutInfo.Builder builder = new ShortcutInfo.Builder(context, shortcutId);
-        
+
             String shortLabel = jsonShortcut.optString("shortLabel");
             String longLabel = jsonShortcut.optString("longLabel");
             if (shortLabel.length() == 0 && longLabel.length() == 0) {
@@ -280,20 +290,29 @@ public class ShortcutsPlugin extends CordovaPlugin {
 
             Icon icon;
             String iconBitmap = jsonShortcut.optString("iconBitmap");
+            String iconAdaptiveBitmap = jsonShortcut.optString("iconAdaptiveBitmap");
             String iconFromResource = jsonShortcut.optString("iconFromResource");
 
             String activityPackage = this.cordova.getActivity().getPackageName();
-        
-            if (iconBitmap.length() > 0) {
+
+
+            if(iconAdaptiveBitmap.length() > 0 && Build.VERSION.SDK_INT >= 26) {
+                //Drawable drawable = new BitmapDrawable(context.getResources(), decodeBase64Bitmap(iconBitmap));
+                //Drawable transparentDrawable = new ColorDrawable(Color.TRANSPARENT);
+                //AdaptiveIconDrawable adaptiveIconDrawable = new AdaptiveIconDrawable(transparentDrawable, drawable);
+                //Bitmap newBitmap = ((BitmapDrawable) adaptiveIconDrawable).getBitmap();
+                //icon = Icon.createWithAdaptiveBitmap(newBitmap);
+                icon = Icon.createWithAdaptiveBitmap(decodeBase64Bitmap(iconAdaptiveBitmap));
+            }
+            else if (iconBitmap.length() > 0) {
                 icon = Icon.createWithBitmap(decodeBase64Bitmap(iconBitmap));
-            } 
-        
-            if (iconFromResource.length() > 0){
+            }
+            else if (iconFromResource.length() > 0){
                 Resources activityRes = this.cordova.getActivity().getResources();
                 int iconId = activityRes.getIdentifier(iconFromResource, "drawable", activityPackage);
                 icon = Icon.createWithResource(context, iconId);
             }
-        
+
             else {
                 PackageManager pm = context.getPackageManager();
                 ApplicationInfo applicationInfo = pm.getApplicationInfo(activityPackage, PackageManager.GET_META_DATA);
@@ -328,7 +347,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
             ShortcutManager shortcutManager = context.getSystemService(ShortcutManager.class);
             shortcutManager.setDynamicShortcuts(shortcuts);
 
-            Log.i(TAG, String.format("Saved %d dynamic shortcuts.", count));
+            Log.i(TAG, String.format("Saved % dynamic shortcuts.", count));
     }
 
     private ShortcutInfoCompat buildPinnedShortcut(
@@ -345,7 +364,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
         }
 
         ShortcutInfoCompat.Builder builder = new ShortcutInfoCompat.Builder(context, shortcutId);
-    
+
         String shortLabel = jsonShortcut.optString("shortLabel");
         String longLabel = jsonShortcut.optString("longLabel");
         if (shortLabel.length() == 0 && longLabel.length() == 0) {
