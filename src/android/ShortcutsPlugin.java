@@ -233,9 +233,6 @@ public class ShortcutsPlugin extends CordovaPlugin {
                 String key = keys.next();
                 Object value = extras.get(key);
                 if (value != null) {
-                    if (key.indexOf('.') < 0) {
-                        key = activityPackage + "." + key;
-                    }
                     if (value instanceof Boolean) {
                         intent.putExtra(key, (Boolean)value);
                     }
