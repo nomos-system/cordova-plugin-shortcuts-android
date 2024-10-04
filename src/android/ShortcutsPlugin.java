@@ -347,7 +347,7 @@ public class ShortcutsPlugin extends CordovaPlugin {
             ShortcutManager shortcutManager = context.getSystemService(ShortcutManager.class);
             shortcutManager.setDynamicShortcuts(shortcuts);
 
-            Log.i(TAG, String.format("Saved % dynamic shortcuts.", count));
+            Log.i(TAG, String.format("Saved %d dynamic shortcuts.", count));
     }
 
     private ShortcutInfoCompat buildPinnedShortcut(
