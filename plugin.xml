@@ -36,6 +36,6 @@
         </config-file>
 
         <!-- cordova plugin src files -->
-        <source-file src="src/android/ShortcutsPlugin.java" target-dir="src/com/plugin/shortcuts" />
+        <source-file src="src/android/ShortcutsPlugin.java" target-dir="src/com/plugins/shortcuts" />
     </platform>
 </plugin>
